@@ -8,7 +8,7 @@ Register Here : [MyGate](https://app.mygate.network/login?code=9OqMCE) | Use Cod
   - Auto Get Account Information
   - Auto Run With Auto Proxy if u Choose 1 [Use [Monosans Proxy](https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/all.txt)]
   - Auto Run With Manual Proxy if u Choose 2 [Paste Ur personal proxy in manual_proxy.txt]
-  - Auto Complete Available Tasks
+  - Auto Run Without Proxy if u Choose 3
   - Auto Register Node If Don't Have
   - Auto Connect and Reconnect Websocket
   - Multi Accounts With Threads
