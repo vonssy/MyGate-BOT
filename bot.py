@@ -112,7 +112,7 @@ class MyGate:
         hide_token = token[:3] + '*' * 3 + token[-3:]
         return hide_token
         
-    async def user_data(self, token: str, proxy=None, retries=3):
+    async def user_data(self, token: str, proxy=None, retries=5):
         url = "https://api.mygate.network/api/front/users/me"
         headers = {
             **self.headers,
@@ -123,19 +123,18 @@ class MyGate:
         for attempt in range(retries):
             connector = ProxyConnector.from_url(proxy) if proxy else None
             try:
-                async with ClientSession(connector=connector, timeout=ClientTimeout(total=120)) as session:
+                async with ClientSession(connector=connector, timeout=ClientTimeout(total=60)) as session:
                     async with session.get(url=url, headers=headers) as response:
                         response.raise_for_status()
                         result = await response.json()
                         return result['data']
             except (Exception, ClientResponseError) as e:
                 if attempt < retries - 1:
-                    self.log(f"{Fore.RED+Style.BRIGHT}Error: {str(e)}{Style.RESET_ALL}")
                     await asyncio.sleep(2)
                 else:
                     return None
         
-    async def user_verif(self, token: str, proxy=None, retries=3):
+    async def user_verif(self, token: str, proxy=None, retries=5):
         url = "https://api.mygate.network/api/front/referrals/referral/9OqMCE"
         headers = {
             **self.headers,
@@ -147,7 +146,7 @@ class MyGate:
         for attempt in range(retries):
             connector = ProxyConnector.from_url(proxy) if proxy else None
             try:
-                async with ClientSession(connector=connector, timeout=ClientTimeout(total=120)) as session:
+                async with ClientSession(connector=connector, timeout=ClientTimeout(total=60)) as session:
                     async with session.post(url=url, headers=headers) as response:
                         if response.status == 400:
                             return None
@@ -156,12 +155,11 @@ class MyGate:
                         await response.json()
             except (Exception, ClientResponseError) as e:
                 if attempt < retries - 1:
-                    self.log(f"{Fore.RED+Style.BRIGHT}Error: {str(e)}{Style.RESET_ALL}")
                     await asyncio.sleep(2)
                 else:
                     return None
         
-    async def user_node(self, token: str, proxy=None, retries=3):
+    async def user_node(self, token: str, proxy=None, retries=5):
         url = "https://api.mygate.network/api/front/nodes"
         headers = {
             **self.headers,
@@ -172,19 +170,18 @@ class MyGate:
         for attempt in range(retries):
             connector = ProxyConnector.from_url(proxy) if proxy else None
             try:
-                async with ClientSession(connector=connector, timeout=ClientTimeout(total=120)) as session:
+                async with ClientSession(connector=connector, timeout=ClientTimeout(total=60)) as session:
                     async with session.get(url=url, headers=headers) as response:
                         response.raise_for_status()
                         result = await response.json()
                         return result['data']
             except (Exception, ClientResponseError) as e:
                 if attempt < retries - 1:
-                    self.log(f"{Fore.RED+Style.BRIGHT}Error: {str(e)}{Style.RESET_ALL}")
                     await asyncio.sleep(2)
                 else:
                     return None
         
-    async def add_node(self, token: str, proxy=None, retries=3):
+    async def add_node(self, token: str, proxy=None, retries=5):
         node_id = str(uuid.uuid4())
         activation_date = datetime.utcnow().isoformat() + "Z"
 
@@ -200,62 +197,41 @@ class MyGate:
         for attempt in range(retries):
             connector = ProxyConnector.from_url(proxy) if proxy else None
             try:
-                async with ClientSession(connector=connector, timeout=ClientTimeout(total=120)) as session:
+                async with ClientSession(connector=connector, timeout=ClientTimeout(total=60)) as session:
                     async with session.post(url=url, headers=headers, data=data) as response:
                         response.raise_for_status()
                         result = await response.json()
                         return result['data']
             except (Exception, ClientResponseError) as e:
                 if attempt < retries - 1:
-                    self.log(f"{Fore.RED+Style.BRIGHT}Error: {str(e)}{Style.RESET_ALL}")
                     await asyncio.sleep(2)
                 else:
                     return None
         
-    async def connect_websocket(self, token: str, node_id: str, name: str, proxy=None, retries=60):
-        wss_url = f"wss://api.mygate.network/socket.io/?nodeId=${node_id}&EIO=4&transport=websocket"
-        reg_node_msg = f'40{{ "token":"Bearer {token}"}}'
-
-        for attempt in range(retries):
-            try:
-                connector = ProxyConnector.from_url(proxy) if proxy else None
-                async with ClientSession(connector=connector, timeout=ClientTimeout(total=120)) as session:
-                    try:
+    async def connect_websocket(self, token: str, node_id: str, name: str, use_proxy: bool, proxy=None, retries=60):
+        wss_url = f"wss://api.mygate.network/socket.io/?nodeId={node_id}&EIO=4&transport=websocket"
+        message = f'40{{ "token":"Bearer {token}"}}'
+        
+        connector = ProxyConnector.from_url(proxy) if proxy else None
+        session = ClientSession(connector=connector, timeout=ClientTimeout(total=60))
+        try:
+            for attempt in range(retries):
+                try:
+                    async with session:
                         async with session.ws_connect(wss_url) as wss:
                             self.log(
                                 f"{Fore.MAGENTA + Style.BRIGHT}[ Account{Style.RESET_ALL}"
                                 f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
-                                f"{Fore.GREEN + Style.BRIGHT}WebSocket Is Connected{Style.RESET_ALL}"
-                                f"{Fore.WHITE + Style.BRIGHT} With Proxy {proxy} {Style.RESET_ALL}"
-                                f"{Fore.MAGENTA + Style.BRIGHT}]{Style.RESET_ALL}"
-                            )
-                            await asyncio.sleep(1)
-
-                            await wss.send_str(reg_node_msg)
-                            self.log(
-                                f"{Fore.MAGENTA + Style.BRIGHT}[ Account{Style.RESET_ALL}"
-                                f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
                                 f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
-                                f"{Fore.WHITE + Style.BRIGHT} Node ID {Style.RESET_ALL}"
-                                f"{Fore.BLUE + Style.BRIGHT}{node_id}{Style.RESET_ALL}"
-                                f"{Fore.MAGENTA + Style.BRIGHT} ] [ Sending Message:{Style.RESET_ALL}"
-                                f"{Fore.WHITE + Style.BRIGHT} {reg_node_msg} {Style.RESET_ALL}"
-                                f"{Fore.MAGENTA + Style.BRIGHT}]{Style.RESET_ALL}"
+                                f"{Fore.GREEN + Style.BRIGHT} Websocket Connected {Style.RESET_ALL}"
+                                f"{Fore.WHITE + Style.BRIGHT}With Proxy {proxy}{Style.RESET_ALL}"
+                                f"{Fore.MAGENTA + Style.BRIGHT} ]{Style.RESET_ALL}"
                             )
+                            await wss.send_str(message)
 
                             async for msg in wss:
                                 if msg.type == WSMsgType.TEXT:
                                     if msg.data in {"2", "41"}:
-                                        self.log(
-                                            f"{Fore.MAGENTA + Style.BRIGHT}[ Account{Style.RESET_ALL}"
-                                            f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
-                                            f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
-                                            f"{Fore.WHITE + Style.BRIGHT} Node ID {Style.RESET_ALL}"
-                                            f"{Fore.BLUE + Style.BRIGHT}{node_id}{Style.RESET_ALL}"
-                                            f"{Fore.MAGENTA + Style.BRIGHT} ] [ Received Message:{Style.RESET_ALL}"
-                                            f"{Fore.WHITE + Style.BRIGHT} {msg.data} {Style.RESET_ALL}"
-                                            f"{Fore.MAGENTA + Style.BRIGHT}]{Style.RESET_ALL}"
-                                        )
                                         await wss.send_str("3")
                                     else:
                                         self.log(
@@ -268,18 +244,7 @@ class MyGate:
                                             f"{Fore.WHITE + Style.BRIGHT} {msg.data} {Style.RESET_ALL}"
                                             f"{Fore.MAGENTA + Style.BRIGHT}]{Style.RESET_ALL}"
                                         )
-                                elif msg.type == WSMsgType.BINARY:
-                                    self.log(
-                                            f"{Fore.MAGENTA + Style.BRIGHT}[ Account{Style.RESET_ALL}"
-                                            f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
-                                            f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
-                                            f"{Fore.WHITE + Style.BRIGHT} Node ID {Style.RESET_ALL}"
-                                            f"{Fore.BLUE + Style.BRIGHT}{node_id}{Style.RESET_ALL}"
-                                            f"{Fore.MAGENTA + Style.BRIGHT} ] [ Received Binary Message:{Style.RESET_ALL}"
-                                            f"{Fore.WHITE + Style.BRIGHT} {msg.data} {Style.RESET_ALL}"
-                                            f"{Fore.MAGENTA + Style.BRIGHT}]{Style.RESET_ALL}"
-                                        )
-                                elif msg.type == WSMsgType.CLOSED:
+                                elif msg.type in [WSMsgType.CLOSED, WSMsgType.ERROR]:
                                     self.log(
                                         f"{Fore.MAGENTA + Style.BRIGHT}[ Account{Style.RESET_ALL}"
                                         f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
@@ -288,50 +253,45 @@ class MyGate:
                                         f"{Fore.MAGENTA + Style.BRIGHT}]{Style.RESET_ALL}"
                                     )
                                     break
-                                elif msg.type == WSMsgType.ERROR:
-                                    self.log(
-                                        f"{Fore.MAGENTA + Style.BRIGHT}[ Account{Style.RESET_ALL}"
-                                        f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
-                                        f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
-                                        f"{Fore.RED + Style.BRIGHT} Websocket Error: {msg.data} {Style.RESET_ALL}"
-                                        f"{Fore.MAGENTA + Style.BRIGHT}]{Style.RESET_ALL}"
-                                    )
-                                    break
 
-                    except Exception as e:
-                        self.log(f"{Fore.RED + Style.BRIGHT}Error: {str(e)}{Style.RESET_ALL}" )
-                        raise
+                except Exception as e:
+                    if attempt < retries - 1:
+                        await asyncio.sleep(2)
+                        continue
+                    
+                    text = "Retrying..."
+                    if use_proxy:
+                        text = "Retrying With Next Proxy..."
 
-            except Exception as e:
-                if attempt < retries - 1:
-                    self.log(f"{Fore.RED + Style.BRIGHT}Error: {str(e)}{Style.RESET_ALL}" )
-                    print(
-                        f"{Fore.CYAN + Style.BRIGHT}[ {datetime.now().astimezone(wib).strftime('%x %X %Z')} ]{Style.RESET_ALL}"
-                        f"{Fore.WHITE + Style.BRIGHT} | {Style.RESET_ALL}"
+                    self.log(
                         f"{Fore.MAGENTA + Style.BRIGHT}[ Account{Style.RESET_ALL}"
                         f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
-                        f"{Fore.RED + Style.BRIGHT}WebSocket Isn't Connected.{Style.RESET_ALL}"
-                        f"{Fore.YELLOW + Style.BRIGHT} Retrying With Next Proxy... {Style.RESET_ALL}"
-                        f"{Fore.MAGENTA + Style.BRIGHT}]{Style.RESET_ALL}",
-                        end="\r",
-                        flush=True
+                        f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
+                        f"{Fore.RED + Style.BRIGHT} Websocket Not Connected. {Style.RESET_ALL}"
+                        f"{Fore.YELLOW + Style.BRIGHT}{text}{Style.RESET_ALL}"
+                        f"{Fore.MAGENTA + Style.BRIGHT} ]{Style.RESET_ALL}"
                     )
-                    if proxy:
+                    if use_proxy:
                         proxy = self.get_next_proxy()
 
-                    await asyncio.sleep(5)
-                    continue
-
-                break
-
+        except asyncio.CancelledError:
             self.log(
                 f"{Fore.MAGENTA + Style.BRIGHT}[ Account{Style.RESET_ALL}"
                 f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
                 f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
-                f"{Fore.YELLOW + Style.BRIGHT} Websocket Reconnecting in 5 Seconds {Style.RESET_ALL}"
+                f"{Fore.YELLOW + Style.BRIGHT} Websocket Closed {Style.RESET_ALL}"
                 f"{Fore.MAGENTA + Style.BRIGHT}]{Style.RESET_ALL}"
             )
-            await asyncio.sleep(5)
+        finally:
+            await session.close()
+
+        self.log(
+            f"{Fore.MAGENTA + Style.BRIGHT}[ Account{Style.RESET_ALL}"
+            f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
+            f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
+            f"{Fore.YELLOW + Style.BRIGHT} Reconnecting to WebSocket... {Style.RESET_ALL}"
+            f"{Fore.MAGENTA + Style.BRIGHT}]{Style.RESET_ALL}"
+        )
         
     async def question(self):
         while True:
@@ -406,6 +366,13 @@ class MyGate:
 
             nodes = await self.user_node(token)
             if not nodes:
+                self.log(
+                    f"{Fore.MAGENTA + Style.BRIGHT}[ Account{Style.RESET_ALL}"
+                    f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
+                    f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
+                    f"{Fore.RED + Style.BRIGHT} Node Data Is None {Style.RESET_ALL}"
+                    f"{Fore.MAGENTA + Style.BRIGHT}]{Style.RESET_ALL}"
+                )
                 return
             
             node_items = nodes.get("items", [])
@@ -434,7 +401,9 @@ class MyGate:
                     f"{Fore.WHITE + Style.BRIGHT} ID {node_id} {Style.RESET_ALL}"
                     f"{Fore.MAGENTA + Style.BRIGHT}]{Style.RESET_ALL}"
                 )
-                await self.connect_websocket(token, node_id, name, proxy)
+
+                await self.connect_websocket(token, node_id, name, use_proxy, proxy)
+
             else:
                 for node in node_items:
                     node_id = node['id']
@@ -457,7 +426,7 @@ class MyGate:
                         f"{Fore.MAGENTA + Style.BRIGHT}]{Style.RESET_ALL}"
                     )
 
-                    await self.connect_websocket(token, node_id, name, proxy)
+                    await self.connect_websocket(token, node_id, name, use_proxy, proxy)
     
     async def main(self):
         try:
@@ -488,9 +457,13 @@ class MyGate:
                 for token in tokens:
                     token = token.strip()
                     if token:
-                        tasks.append(self.process_accounts(token, use_proxy))
+                        tasks.append(asyncio.wait_for(self.process_accounts(token, use_proxy), timeout=600))
 
-                await asyncio.gather(*tasks)
+                try:
+                    await asyncio.gather(*tasks)
+                except asyncio.TimeoutError:
+                    self.log(f"{Fore.YELLOW+Style.BRIGHT}Session Clossed{Style.RESET_ALL}")
+
                 await asyncio.sleep(3)
 
         except (Exception, FileNotFoundError) as e:
