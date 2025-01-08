@@ -362,9 +362,9 @@ class MyGate:
                 f"{Fore.MAGENTA + Style.BRIGHT}]{Style.RESET_ALL}"
             )
 
-            await self.user_verif(token)
+            await self.user_verif(token, proxy)
 
-            nodes = await self.user_node(token)
+            nodes = await self.user_node(token, proxy)
             if not nodes:
                 self.log(
                     f"{Fore.MAGENTA + Style.BRIGHT}[ Account{Style.RESET_ALL}"
@@ -377,7 +377,7 @@ class MyGate:
             
             node_items = nodes.get("items", [])
             if isinstance(node_items, list) and len(node_items) == 0:
-                register = await self.add_node(token)
+                register = await self.add_node(token, proxy)
                 if not register:
                     self.log(
                         f"{Fore.MAGENTA + Style.BRIGHT}[ Account{Style.RESET_ALL}"
@@ -405,6 +405,7 @@ class MyGate:
                 await self.connect_websocket(token, node_id, name, use_proxy, proxy)
 
             else:
+                tasks = []
                 for node in node_items:
                     node_id = node['id']
                     node_name = node['name']
@@ -426,7 +427,9 @@ class MyGate:
                         f"{Fore.MAGENTA + Style.BRIGHT}]{Style.RESET_ALL}"
                     )
 
-                    await self.connect_websocket(token, node_id, name, use_proxy, proxy)
+                    tasks.append(self.connect_websocket(token, node_id, name, use_proxy, proxy))
+                    
+                await asyncio.gather(*tasks)
     
     async def main(self):
         try:
