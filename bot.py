@@ -427,6 +427,9 @@ class MyGate:
                         f"{Fore.MAGENTA + Style.BRIGHT}]{Style.RESET_ALL}"
                     )
 
+                    if use_proxy:
+                        proxy = self.get_next_proxy()
+
                     tasks.append(self.connect_websocket(token, node_id, name, use_proxy, proxy))
                     
                 await asyncio.gather(*tasks)
