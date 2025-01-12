@@ -1,7 +1,7 @@
-# MyGate BOT
-MyGate BOT `[ Under Repair ]`
+# MyGate Network BOT
+MyGate Network BOT
 
-Register Here : [MyGate](https://app.mygate.network/login?code=9OqMCE) | Use Code : 9OqMCE
+Register Here : [MyGate Network](https://app.mygate.network/login?code=9OqMCE) | Use Code : 9OqMCE
 
 ## Fitur
 
@@ -10,8 +10,10 @@ Register Here : [MyGate](https://app.mygate.network/login?code=9OqMCE) | Use Cod
   - Auto Run With Manual Proxy if u Choose 2 [Paste Ur personal proxy in manual_proxy.txt]
   - Auto Run Without Proxy if u Choose 3
   - Auto Register Node If Don't Have
-  - Auto Connect and Reconnect Websocket
+  - Auto Complete Social Media and Ambassador Tasks
+  - Auto Connect and Reconnect Websocket Every 10 Minutes
   - Multi Accounts With Threads
+  - Not Support Running Multi Node
 
 ## Prasyarat
 
