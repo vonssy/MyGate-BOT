@@ -3,7 +3,7 @@ MyGate Network BOT
 
 Register Here : [MyGate Network](https://app.mygate.network/login?code=9OqMCE) | Use Code : 9OqMCE
 
-## Fitur
+## Features
 
   - Auto Get Account Information
   - Auto Run With Auto Proxy if u Choose 1 [Use [Monosans Proxy](https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/all.txt)]
@@ -64,7 +64,7 @@ python bot.py #or python3 bot.py
 
 Note: if it doesn't increase, it's usually because of restrictions. try again later.
 
-## Buy Me a Coffe
+## Buy Me a Coffee
 
 - **EVM:** 0xe3c9ef9a39e9eb0582e5b147026cae524338521a
 - **TON:** UQBEFv58DC4FUrGqinBB5PAQS7TzXSm5c1Fn6nkiet8kmehB
