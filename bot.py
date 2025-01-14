@@ -8,7 +8,7 @@ from aiohttp_socks import ProxyConnector
 from fake_useragent import FakeUserAgent
 from datetime import datetime
 from colorama import *
-import asyncio, json, uuid, time, os, pytz
+import asyncio, json, uuid, hashlib, hmac, time, os, pytz
 
 wib = pytz.timezone('Asia/Jakarta')
 
@@ -108,19 +108,28 @@ class MyGate:
         self.proxy_index = (self.proxy_index + 1) % len(self.proxies)
         return self.check_proxy_schemes(proxy)
     
+    def generate_signature(self, id: str):
+        secret_key = "|`8S%QN9v&/J^Za".encode('utf-8')
+        timestamp = int(time.time() * 1000)
+        data = json.dumps({"nodeId": id})
+        message = f"{data}{timestamp}".encode('utf-8')
+        signature = hmac.new(secret_key, message, hashlib.sha256).hexdigest()
+        
+        return signature, timestamp
+    
     def generate_node_id(self):
-        node_id = str(uuid.uuid4())
-        return node_id
+        id = str(uuid.uuid4())
+        return id
     
     def generate_activation_date(self):
         activation_date = datetime.utcnow().isoformat() + "Z"
         return activation_date
     
-    def hide_token(self, token):
+    def hide_token(self, token: str):
         hide_token = token[:3] + '*' * 3 + token[-3:]
         return hide_token
     
-    async def user_data(self, token: str, proxy=None, retries=5):
+    async def users_data(self, token: str, proxy=None, retries=5):
         url = "https://api.mygate.network/api/front/users/me"
         headers = {
             **self.headers,
@@ -142,7 +151,7 @@ class MyGate:
                 else:
                     return None
         
-    async def user_verif(self, token: str, proxy=None, retries=5):
+    async def users_confirm(self, token: str, proxy=None, retries=5):
         url = "https://api.mygate.network/api/front/referrals/referral/9OqMCE"
         headers = {
             **self.headers,
@@ -167,7 +176,7 @@ class MyGate:
                 else:
                     return None
         
-    async def today_earning(self, token: str, proxy=None, retries=5):
+    async def users_today_earning(self, token: str, proxy=None, retries=5):
         url = "https://api.mygate.network/api/front/user-transactions/TODAY/earn"
         headers = {
             **self.headers,
@@ -188,7 +197,7 @@ class MyGate:
                 else:
                     return None
                 
-    async def season_earning(self, token: str, proxy=None, retries=5):
+    async def users_season_earning(self, token: str, proxy=None, retries=5):
         url = "https://api.mygate.network/api/front/user-transactions/ALL/earn"
         headers = {
             **self.headers,
@@ -209,7 +218,7 @@ class MyGate:
                 else:
                     return None
                     
-    async def user_nodes(self, token: str, proxy=None, retries=5):
+    async def users_all_nodes_data(self, token: str, proxy=None, retries=5):
         url = "https://api.mygate.network/api/front/nodes"
         headers = {
             **self.headers,
@@ -231,9 +240,31 @@ class MyGate:
                 else:
                     return None
                 
-    async def register_node(self, token: str, node_id: str, activation_date: str, proxy=None, retries=5):
+    async def users_nodes_data(self, token: str, _id: str, proxy=None, retries=5):
+        url = f"https://api.mygate.network/api/front/nodes/{_id}"
+        headers = {
+            **self.headers,
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+
+        }
+        for attempt in range(retries):
+            connector = ProxyConnector.from_url(proxy) if proxy else None
+            try:
+                async with ClientSession(connector=connector, timeout=ClientTimeout(total=60)) as session:
+                    async with session.get(url=url, headers=headers) as response:
+                        response.raise_for_status()
+                        result = await response.json()
+                        return result['data']
+            except (Exception, ClientResponseError) as e:
+                if attempt < retries - 1:
+                    await asyncio.sleep(2)
+                else:
+                    return None
+                
+    async def users_node_register(self, token: str, id: str, activation_date: str, proxy=None, retries=5):
         url = "https://api.mygate.network/api/front/nodes"
-        data = json.dumps({"id":node_id, "status":"Good", "activationDate":activation_date})
+        data = json.dumps({"id":id, "status":"Good", "activationDate":activation_date})
         headers = {
             **self.headers,
             "Authorization": f"Bearer {token}",
@@ -255,72 +286,6 @@ class MyGate:
                 else:
                     return None
                 
-    async def load_node_data(self, token: str, name: str, proxy=None):
-        nodes = await self.user_nodes(token, proxy)
-        if not nodes:
-            self.log(
-                f"{Fore.CYAN + Style.BRIGHT}[ Account{Style.RESET_ALL}"
-                f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
-                f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
-                f"{Fore.RED + Style.BRIGHT} GET Node Data Failed {Style.RESET_ALL}"
-                f"{Fore.CYAN + Style.BRIGHT}]{Style.RESET_ALL}"
-            )
-            return
-        
-        list_nodes = nodes.get("items", [])
-        if isinstance(list_nodes, list) and len(list_nodes) == 0:
-            node_id = self.generate_node_id()
-            activation_date = self.generate_activation_date()
-
-            node = await self.register_node(token, node_id, activation_date, proxy)
-            if not node:
-                self.log(
-                    f"{Fore.CYAN + Style.BRIGHT}[ Account{Style.RESET_ALL}"
-                    f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
-                    f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
-                    f"{Fore.CYAN + Style.BRIGHT} Node ID {Style.RESET_ALL}"
-                    f"{Fore.WHITE + Style.BRIGHT}{node_id}{Style.RESET_ALL}"
-                    f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
-                    f"{Fore.RED + Style.BRIGHT}Register Failed{Style.RESET_ALL}"
-                    f"{Fore.CYAN + Style.BRIGHT} ]{Style.RESET_ALL}"
-                )
-                return
-        
-            self.log(
-                f"{Fore.CYAN + Style.BRIGHT}[ Account{Style.RESET_ALL}"
-                f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
-                f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
-                f"{Fore.CYAN + Style.BRIGHT} Node ID {Style.RESET_ALL}"
-                f"{Fore.WHITE + Style.BRIGHT}{node_id}{Style.RESET_ALL}"
-                f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
-                f"{Fore.GREEN + Style.BRIGHT}Registered Successfully{Style.RESET_ALL}"
-                f"{Fore.CYAN + Style.BRIGHT} ]{Style.RESET_ALL}"
-            )
-            return node_id
-
-        else:
-            node_id = list_nodes[0]['id']
-            today_earn = list_nodes[0]['todayEarn']
-            season_earn = list_nodes[0]['seasonEarn']
-            uptime = list_nodes[0]['uptime']
-            self.log(
-                f"{Fore.CYAN + Style.BRIGHT}[ Account{Style.RESET_ALL}"
-                f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
-                f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
-                f"{Fore.CYAN + Style.BRIGHT} Node ID {Style.RESET_ALL}"
-                f"{Fore.WHITE + Style.BRIGHT}{node_id}{Style.RESET_ALL}"
-                f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
-                f"{Fore.CYAN + Style.BRIGHT}Earning{Style.RESET_ALL}"
-                f"{Fore.WHITE + Style.BRIGHT} Today {today_earn} PTS {Style.RESET_ALL}"
-                f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
-                f"{Fore.WHITE + Style.BRIGHT} Season {season_earn} PTS {Style.RESET_ALL}"
-                f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
-                f"{Fore.CYAN + Style.BRIGHT} Uptime {Style.RESET_ALL}"
-                f"{Fore.WHITE + Style.BRIGHT}{uptime}{Style.RESET_ALL}"
-                f"{Fore.CYAN + Style.BRIGHT} ]{Style.RESET_ALL}"
-            )
-            return node_id
-
     async def social_media_tasks(self, token: str, task_type: str, proxy=None, retries=5):
         url = f"https://api.mygate.network/api/front/achievements/{task_type}"
         headers = {
@@ -387,15 +352,15 @@ class MyGate:
                 else:
                     return None
                 
-    async def user_earning(self, token: str, name: str, proxy=None):
+    async def process_loads_users_earning(self, token: str, name: str, proxy=None):
         while True:
             today_point = 0
             season_point = 0
-            today_earning = await self.today_earning(token, proxy)
+            today_earning = await self.users_today_earning(token, proxy)
             if today_earning:
                 today_point = today_earning['data']
 
-            season_earning = await self.season_earning(token, proxy)
+            season_earning = await self.users_season_earning(token, proxy)
             if season_earning:
                 season_point = season_earning['data']
 
@@ -411,214 +376,110 @@ class MyGate:
             )
             
             await asyncio.sleep(600)
+                
+    async def process_loads_nodes_data(self, token: str, name: str, proxy=None):
+        nodes = await self.users_all_nodes_data(token, proxy)
+        if not nodes:
+            self.log(
+                f"{Fore.CYAN + Style.BRIGHT}[ Account{Style.RESET_ALL}"
+                f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
+                f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
+                f"{Fore.RED + Style.BRIGHT} GET Node Data Failed {Style.RESET_ALL}"
+                f"{Fore.CYAN + Style.BRIGHT}]{Style.RESET_ALL}"
+            )
+            return []
 
-    async def connect_websocket(self, token: str, name: str, node_id: str, use_proxy: bool, proxy=None, retries=5):
-        wss_url = f"wss://api.mygate.network/socket.io/?nodeId={node_id}&EIO=4&transport=websocket"
-        headers = {
-            "Accept-encoding": "gzip, deflate, br, zstd",
-            "Accept-language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
-            "Cache-control": "no-cache",
-            "Connection": "Upgrade",
-            "Host": "api.mygate.network",
-            "Origin": "chrome-extension://hajiimgolngmlbglaoheacnejbnnmoco",
-            "Pragma": "no-cache",
-            "Sec-Websocket-Extensions": "permessage-deflate; client_max_window_bits",
-            "Sec-Websocket-Key": "+XFqg8JtrjOUgzPPhmZBTQ==",
-            "Sec-Websocket-Version": "13",
-            "Upgrade": "websocket",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-        }
-        message = f'40{{"token":"Bearer {token}"}}'
+        list_nodes = nodes.get("items", [])
+        node_ids = []
 
-        while True:
-            connector = ProxyConnector.from_url(proxy) if proxy else None
-            session = ClientSession(connector=connector, timeout=ClientTimeout(total=60))
+        if isinstance(list_nodes, list) and len(list_nodes) == 0:
+            id = self.generate_node_id()
+            activation_date = self.generate_activation_date()
 
-            try:
-                for attempt in range(retries):
-                    try:
-                        async with session.ws_connect(wss_url, headers=headers) as wss:
-                            self.log(
-                                f"{Fore.CYAN + Style.BRIGHT}[ Account{Style.RESET_ALL}"
-                                f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
-                                f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
-                                f"{Fore.CYAN + Style.BRIGHT} Proxy {Style.RESET_ALL}"
-                                f"{Fore.WHITE + Style.BRIGHT}{proxy}{Style.RESET_ALL}"
-                                f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
-                                f"{Fore.GREEN + Style.BRIGHT}Websocket Is Connected{Style.RESET_ALL}"
-                                f"{Fore.CYAN + Style.BRIGHT} ]{Style.RESET_ALL}"
-                            )
-                            
-                            await wss.send_str(message)
-                            self.log(
-                                f"{Fore.CYAN + Style.BRIGHT}[ Account{Style.RESET_ALL}"
-                                f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
-                                f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
-                                f"{Fore.CYAN + Style.BRIGHT} Node ID {Style.RESET_ALL}"
-                                f"{Fore.WHITE + Style.BRIGHT}{node_id}{Style.RESET_ALL}"
-                                f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
-                                f"{Fore.GREEN + Style.BRIGHT}Sending Message:{Style.RESET_ALL}"
-                                f"{Fore.WHITE + Style.BRIGHT} {message} {Style.RESET_ALL}"
-                                f"{Fore.CYAN + Style.BRIGHT}]{Style.RESET_ALL}"
-                            )
-                            
-                            last_ping = time.time()
-                            async for msg in wss:
-                                if time.time() - last_ping > 600:
-                                    self.log(
-                                        f"{Fore.CYAN + Style.BRIGHT}[ Account{Style.RESET_ALL}"
-                                        f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
-                                        f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
-                                        f"{Fore.CYAN + Style.BRIGHT} Node ID {Style.RESET_ALL}"
-                                        f"{Fore.WHITE + Style.BRIGHT}{node_id}{Style.RESET_ALL}"
-                                        f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
-                                        f"{Fore.YELLOW + Style.BRIGHT}Webscoket Connection Closed. Reconnecting...{Style.RESET_ALL}"
-                                        f"{Fore.CYAN + Style.BRIGHT} ]{Style.RESET_ALL}"
-                                    )
-                                    await wss.close()
-                                    break
-                                
-                                if msg.type == WSMsgType.TEXT:
-                                    if msg.data in ["2", "41"]:
-                                        await wss.send_str("3")
-                                        print(
-                                            f"{Fore.CYAN + Style.BRIGHT}[ {datetime.now().astimezone(wib).strftime('%x %X %Z')} ]{Style.RESET_ALL}"
-                                            f"{Fore.WHITE + Style.BRIGHT} | {Style.RESET_ALL}"
-                                            f"{Fore.YELLOW + Style.BRIGHT}Wait For 10 Minutes For Next Ping...{Style.RESET_ALL}",
-                                            end="\r",
-                                            flush=True
-                                        )
-                                    else:
-                                        self.log(
-                                            f"{Fore.CYAN + Style.BRIGHT}[ Account{Style.RESET_ALL}"
-                                            f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
-                                            f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
-                                            f"{Fore.CYAN + Style.BRIGHT} Node ID {Style.RESET_ALL}"
-                                            f"{Fore.WHITE + Style.BRIGHT}{node_id}{Style.RESET_ALL}"
-                                            f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
-                                            f"{Fore.GREEN + Style.BRIGHT}Received Message:{Style.RESET_ALL}"
-                                            f"{Fore.WHITE + Style.BRIGHT} {msg.data} {Style.RESET_ALL}"
-                                            f"{Fore.CYAN + Style.BRIGHT}]{Style.RESET_ALL}"
-                                        )
-                                elif msg.type in [WSMsgType.CLOSED, WSMsgType.ERROR]:
-                                    break
-                                
-                                
-                    except Exception as e:
-                        self.log(
-                            f"{Fore.CYAN + Style.BRIGHT}[ Account{Style.RESET_ALL}"
-                            f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
-                            f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
-                            f"{Fore.CYAN + Style.BRIGHT} Node ID {Style.RESET_ALL}"
-                            f"{Fore.WHITE + Style.BRIGHT}{node_id}{Style.RESET_ALL}"
-                            f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
-                            f"{Fore.YELLOW + Style.BRIGHT}Webscoket GET Error:{Style.RESET_ALL}"
-                            f"{Fore.RED + Style.BRIGHT} {e} {Style.RESET_ALL}"
-                            f"{Fore.CYAN + Style.BRIGHT}]{Style.RESET_ALL}"
-                        )
-                        if attempt < retries - 1:
-                            await asyncio.sleep(5)
-                            continue
-
-                        text = "Retrying..."
-                        if use_proxy:
-                            text = "Retrying With Next Proxy..."
-
-                        self.log(
-                            f"{Fore.CYAN + Style.BRIGHT}[ Account{Style.RESET_ALL}"
-                            f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
-                            f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
-                            f"{Fore.CYAN + Style.BRIGHT} Node ID {Style.RESET_ALL}"
-                            f"{Fore.WHITE + Style.BRIGHT}{node_id}{Style.RESET_ALL}"
-                            f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
-                            f"{Fore.RED + Style.BRIGHT}Websocket Not Connected{Style.RESET_ALL}"
-                            f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
-                            f"{Fore.BLUE + Style.BRIGHT}{text}{Style.RESET_ALL}"
-                            f"{Fore.CYAN + Style.BRIGHT} ]{Style.RESET_ALL}"
-                        )
-                        if use_proxy:
-                            proxy = self.get_next_proxy()
-
-            except asyncio.CancelledError:
+            node = await self.users_node_register(token, id, activation_date, proxy)
+            if not node:
                 self.log(
                     f"{Fore.CYAN + Style.BRIGHT}[ Account{Style.RESET_ALL}"
                     f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
                     f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
                     f"{Fore.CYAN + Style.BRIGHT} Node ID {Style.RESET_ALL}"
-                    f"{Fore.WHITE + Style.BRIGHT}{node_id}{Style.RESET_ALL}"
+                    f"{Fore.WHITE + Style.BRIGHT}{id}{Style.RESET_ALL}"
                     f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
-                    f"{Fore.RED + Style.BRIGHT}Websocket Closed{Style.RESET_ALL}"
+                    f"{Fore.RED + Style.BRIGHT}Register Failed{Style.RESET_ALL}"
                     f"{Fore.CYAN + Style.BRIGHT} ]{Style.RESET_ALL}"
                 )
-                break
-            finally:
-                await session.close()
+                return []
 
+            self.log(
+                f"{Fore.CYAN + Style.BRIGHT}[ Account{Style.RESET_ALL}"
+                f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
+                f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
+                f"{Fore.CYAN + Style.BRIGHT} Node ID {Style.RESET_ALL}"
+                f"{Fore.WHITE + Style.BRIGHT}{id}{Style.RESET_ALL}"
+                f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
+                f"{Fore.GREEN + Style.BRIGHT}Registered Successfully{Style.RESET_ALL}"
+                f"{Fore.CYAN + Style.BRIGHT} ]{Style.RESET_ALL}"
+            )
+            return [{"node_id":id}]
 
-    async def question(self):
+        for node in list_nodes:
+            node_ids.append({"node_id":node['id'], "_id":node['_id']})
+
+        return node_ids
+
+    async def process_loads_nodes_earning(self, token: str, name: str, node_ids: list, proxy=None):
         while True:
-            try:
-                print("1. Run With Auto Proxy")
-                print("2. Run With Manual Proxy")
-                print("3. Run Without Proxy")
-                choose = int(input("Choose [1/2/3] -> ").strip())
+            for node in node_ids:
+                if 'node_id' in node and '_id' in node:
+                    id = node['node_id']
+                    _id = node['_id']
 
-                if choose in [1, 2, 3]:
-                    proxy_type = (
-                        "With Auto Proxy" if choose == 1 else 
-                        "With Manual Proxy" if choose == 2 else 
-                        "Without Proxy"
-                    )
-                    print(f"{Fore.GREEN + Style.BRIGHT}Run {proxy_type} Selected.{Style.RESET_ALL}")
-                    await asyncio.sleep(1)
-                    return choose
+                    nodes_data = await self.users_nodes_data(token, _id, proxy)
+                    if nodes_data:
+                        today_earn = nodes_data['todayEarn']
+                        season_earn = nodes_data['seasonEarn']
+                        uptime = nodes_data['uptime']
+                        self.log(
+                            f"{Fore.CYAN + Style.BRIGHT}[ Account{Style.RESET_ALL}"
+                            f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
+                            f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
+                            f"{Fore.CYAN + Style.BRIGHT} Node ID {Style.RESET_ALL}"
+                            f"{Fore.WHITE + Style.BRIGHT}{id}{Style.RESET_ALL}"
+                            f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
+                            f"{Fore.CYAN + Style.BRIGHT}Earning{Style.RESET_ALL}"
+                            f"{Fore.WHITE + Style.BRIGHT} Today {today_earn} PTS {Style.RESET_ALL}"
+                            f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
+                            f"{Fore.WHITE + Style.BRIGHT} Season {season_earn} PTS {Style.RESET_ALL}"
+                            f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
+                            f"{Fore.CYAN + Style.BRIGHT} Uptime {Style.RESET_ALL}"
+                            f"{Fore.WHITE + Style.BRIGHT}{uptime}{Style.RESET_ALL}"
+                            f"{Fore.CYAN + Style.BRIGHT} ]{Style.RESET_ALL}"
+                        )
+                    else:
+                        self.log(
+                            f"{Fore.CYAN + Style.BRIGHT}[ Account{Style.RESET_ALL}"
+                            f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
+                            f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
+                            f"{Fore.CYAN + Style.BRIGHT} Node ID {Style.RESET_ALL}"
+                            f"{Fore.WHITE + Style.BRIGHT}{id}{Style.RESET_ALL}"
+                            f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
+                            f"{Fore.RED + Style.BRIGHT}GET Eearning Data Failed{Style.RESET_ALL}"
+                            f"{Fore.CYAN + Style.BRIGHT} ]{Style.RESET_ALL}"
+                        )
                 else:
-                    print(f"{Fore.RED + Style.BRIGHT}Please enter either 1, 2 or 3.{Style.RESET_ALL}")
-            except ValueError:
-                print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter a number (1, 2 or 3).{Style.RESET_ALL}")
-        
-    async def process_accounts(self, token: str, use_proxy: bool):
-        proxy = None
-        if use_proxy:
-            proxy = self.get_next_proxy()
-
-        user = None
-        while user is None:
-            user = await self.user_data(token, proxy)
-            if not user:
-                self.log(
-                    f"{Fore.CYAN + Style.BRIGHT}[ Account{Style.RESET_ALL}"
-                    f"{Fore.WHITE + Style.BRIGHT} {self.hide_token(token)} {Style.RESET_ALL}"
-                    f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
-                    f"{Fore.CYAN + Style.BRIGHT} Proxy {Style.RESET_ALL}"
-                    f"{Fore.WHITE + Style.BRIGHT}{proxy}{Style.RESET_ALL}"
-                    f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
-                    f"{Fore.RED + Style.BRIGHT}GET User Data Failed{Style.RESET_ALL}"
-                    f"{Fore.CYAN + Style.BRIGHT} ]{Style.RESET_ALL}"
-                )
-                await asyncio.sleep(1)
-
-                if not use_proxy:
-                    return
-
-                print(
-                    f"{Fore.CYAN + Style.BRIGHT}[ {datetime.now().astimezone(wib).strftime('%x %X %Z')} ]{Style.RESET_ALL}"
-                    f"{Fore.WHITE + Style.BRIGHT} | {Style.RESET_ALL}"
-                    f"{Fore.BLUE + Style.BRIGHT}Try With The Next Proxy,{Style.RESET_ALL}"
-                    f"{Fore.YELLOW + Style.BRIGHT} Wait... {Style.RESET_ALL}",
-                    end="\r",
-                    flush=True
-                )
-
-                proxy = self.get_next_proxy()
-                continue
+                    self.log(
+                        f"{Fore.CYAN + Style.BRIGHT}[ Account{Style.RESET_ALL}"
+                        f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
+                        f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
+                        f"{Fore.YELLOW + Style.BRIGHT} No _id in Node Data {Style.RESET_ALL}"
+                        f"{Fore.CYAN + Style.BRIGHT}]{Style.RESET_ALL}"
+                    )
+                await asyncio.sleep(3)
             
-            name = user['name']
-
-            await self.user_verif(token, proxy)
-
-            asyncio.create_task(self.user_earning(token, name, proxy))
-
+            await asyncio.sleep(600)
+                
+    async def process_users_tasks_completion(self, token: str, name: str, proxy=None):
+        while True:
             for task_type in ["follow-x", "follow-telegram"]:
                 await self.social_media_tasks(token, task_type, proxy)
 
@@ -679,11 +540,225 @@ class MyGate:
                     f"{Fore.RED + Style.BRIGHT} GET Ambassador Tasks Data Failed {Style.RESET_ALL}"
                     f"{Fore.CYAN + Style.BRIGHT}]{Style.RESET_ALL}"
                 )
+            await asyncio.sleep(86400)
 
-            node_id = await self.load_node_data(token, name, proxy)
-            if node_id:
-                await self.connect_websocket(token, name, node_id, use_proxy, proxy)
-    
+    async def connect_websocket(self, token: str, name: str, id: str, use_proxy: bool, proxy=None, retries=5):
+        signature, timestamp = self.generate_signature(id)
+        wss_url = f"wss://api.mygate.network/socket.io/?nodeId={id}&signature={signature}&timestamp={timestamp}&version=2&EIO=4&transport=websocket"
+        headers = {
+            "Accept-encoding": "gzip, deflate, br, zstd",
+            "Accept-language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Cache-control": "no-cache",
+            "Connection": "Upgrade",
+            "Host": "api.mygate.network",
+            "Origin": "chrome-extension://hajiimgolngmlbglaoheacnejbnnmoco",
+            "Pragma": "no-cache",
+            "Sec-Websocket-Extensions": "permessage-deflate; client_max_window_bits",
+            "Sec-Websocket-Key": "+XFqg8JtrjOUgzPPhmZBTQ==",
+            "Sec-Websocket-Version": "13",
+            "Upgrade": "websocket",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        }
+        message = f'40{{"token":"Bearer {token}"}}'
+
+        while True:
+            connector = ProxyConnector.from_url(proxy) if proxy else None
+            session = ClientSession(connector=connector, timeout=ClientTimeout(total=60))
+
+            try:
+                for attempt in range(retries):
+                    try:
+                        async with session.ws_connect(wss_url, headers=headers) as wss:
+                            self.log(
+                                f"{Fore.CYAN + Style.BRIGHT}[ Account{Style.RESET_ALL}"
+                                f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
+                                f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
+                                f"{Fore.CYAN + Style.BRIGHT} Proxy {Style.RESET_ALL}"
+                                f"{Fore.WHITE + Style.BRIGHT}{proxy}{Style.RESET_ALL}"
+                                f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
+                                f"{Fore.GREEN + Style.BRIGHT}Websocket Is Connected{Style.RESET_ALL}"
+                                f"{Fore.CYAN + Style.BRIGHT} ]{Style.RESET_ALL}"
+                            )
+                            
+                            await wss.send_str(message)
+                            self.log(
+                                f"{Fore.CYAN + Style.BRIGHT}[ Account{Style.RESET_ALL}"
+                                f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
+                                f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
+                                f"{Fore.CYAN + Style.BRIGHT} Node ID {Style.RESET_ALL}"
+                                f"{Fore.WHITE + Style.BRIGHT}{id}{Style.RESET_ALL}"
+                                f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
+                                f"{Fore.GREEN + Style.BRIGHT}Sending Message:{Style.RESET_ALL}"
+                                f"{Fore.WHITE + Style.BRIGHT} {message} {Style.RESET_ALL}"
+                                f"{Fore.CYAN + Style.BRIGHT}]{Style.RESET_ALL}"
+                            )
+
+                            async for msg in wss:
+                                if msg.type == WSMsgType.TEXT:
+                                    if msg.data in ["2", "41"]:
+                                        await wss.send_str("3")
+                                        print(
+                                            f"{Fore.CYAN + Style.BRIGHT}[ {datetime.now().astimezone(wib).strftime('%x %X %Z')} ]{Style.RESET_ALL}"
+                                            f"{Fore.WHITE + Style.BRIGHT} | {Style.RESET_ALL}"
+                                            f"{Fore.BLUE + Style.BRIGHT}All Nodes Connection Estabilished{Style.RESET_ALL}",
+                                            end="\r",
+                                            flush=True
+                                        )
+                                    else:
+                                        self.log(
+                                            f"{Fore.CYAN + Style.BRIGHT}[ Account{Style.RESET_ALL}"
+                                            f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
+                                            f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
+                                            f"{Fore.CYAN + Style.BRIGHT} Node ID {Style.RESET_ALL}"
+                                            f"{Fore.WHITE + Style.BRIGHT}{id}{Style.RESET_ALL}"
+                                            f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
+                                            f"{Fore.GREEN + Style.BRIGHT}Received Message:{Style.RESET_ALL}"
+                                            f"{Fore.WHITE + Style.BRIGHT} {msg.data} {Style.RESET_ALL}"
+                                            f"{Fore.CYAN + Style.BRIGHT}]{Style.RESET_ALL}"
+                                        )
+                                elif msg.type in [WSMsgType.CLOSED, WSMsgType.ERROR]:
+                                    self.log(
+                                        f"{Fore.CYAN + Style.BRIGHT}[ Account{Style.RESET_ALL}"
+                                        f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
+                                        f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
+                                        f"{Fore.CYAN + Style.BRIGHT} Node ID {Style.RESET_ALL}"
+                                        f"{Fore.WHITE + Style.BRIGHT}{id}{Style.RESET_ALL}"
+                                        f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
+                                        f"{Fore.YELLOW + Style.BRIGHT}Webscoket Connection Closed. Reconnecting...{Style.RESET_ALL}"
+                                        f"{Fore.CYAN + Style.BRIGHT} ]{Style.RESET_ALL}"
+                                    )
+                                    await wss.close()
+                                    break
+                            
+                    except Exception as e:
+                        self.log(
+                            f"{Fore.CYAN + Style.BRIGHT}[ Account{Style.RESET_ALL}"
+                            f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
+                            f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
+                            f"{Fore.CYAN + Style.BRIGHT} Node ID {Style.RESET_ALL}"
+                            f"{Fore.WHITE + Style.BRIGHT}{id}{Style.RESET_ALL}"
+                            f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
+                            f"{Fore.YELLOW + Style.BRIGHT}Webscoket GET Error:{Style.RESET_ALL}"
+                            f"{Fore.RED + Style.BRIGHT} {e} {Style.RESET_ALL}"
+                            f"{Fore.CYAN + Style.BRIGHT}]{Style.RESET_ALL}"
+                        )
+                        if attempt < retries - 1:
+                            await asyncio.sleep(5)
+                            continue
+
+                        text = "Retrying..."
+                        if use_proxy:
+                            text = "Retrying With Next Proxy..."
+
+                        self.log(
+                            f"{Fore.CYAN + Style.BRIGHT}[ Account{Style.RESET_ALL}"
+                            f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
+                            f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
+                            f"{Fore.CYAN + Style.BRIGHT} Node ID {Style.RESET_ALL}"
+                            f"{Fore.WHITE + Style.BRIGHT}{id}{Style.RESET_ALL}"
+                            f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
+                            f"{Fore.RED + Style.BRIGHT}Websocket Not Connected{Style.RESET_ALL}"
+                            f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
+                            f"{Fore.BLUE + Style.BRIGHT}{text}{Style.RESET_ALL}"
+                            f"{Fore.CYAN + Style.BRIGHT} ]{Style.RESET_ALL}"
+                        )
+                        if use_proxy:
+                            proxy = self.get_next_proxy()
+
+            except asyncio.CancelledError:
+                self.log(
+                    f"{Fore.CYAN + Style.BRIGHT}[ Account{Style.RESET_ALL}"
+                    f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
+                    f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
+                    f"{Fore.CYAN + Style.BRIGHT} Node ID {Style.RESET_ALL}"
+                    f"{Fore.WHITE + Style.BRIGHT}{id}{Style.RESET_ALL}"
+                    f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
+                    f"{Fore.RED + Style.BRIGHT}Websocket Closed{Style.RESET_ALL}"
+                    f"{Fore.CYAN + Style.BRIGHT} ]{Style.RESET_ALL}"
+                )
+                break
+            finally:
+                await session.close()
+
+    async def question(self):
+        while True:
+            try:
+                print("1. Run With Auto Proxy")
+                print("2. Run With Manual Proxy")
+                print("3. Run Without Proxy")
+                choose = int(input("Choose [1/2/3] -> ").strip())
+
+                if choose in [1, 2, 3]:
+                    proxy_type = (
+                        "With Auto Proxy" if choose == 1 else 
+                        "With Manual Proxy" if choose == 2 else 
+                        "Without Proxy"
+                    )
+                    print(f"{Fore.GREEN + Style.BRIGHT}Run {proxy_type} Selected.{Style.RESET_ALL}")
+                    await asyncio.sleep(1)
+                    return choose
+                else:
+                    print(f"{Fore.RED + Style.BRIGHT}Please enter either 1, 2 or 3.{Style.RESET_ALL}")
+            except ValueError:
+                print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter a number (1, 2 or 3).{Style.RESET_ALL}")
+        
+    async def process_accounts(self, token: str, use_proxy: bool):
+        proxy = None
+        if use_proxy:
+            proxy = self.get_next_proxy()
+
+        user = None
+        while user is None:
+            user = await self.users_data(token, proxy)
+            if not user:
+                self.log(
+                    f"{Fore.CYAN + Style.BRIGHT}[ Account{Style.RESET_ALL}"
+                    f"{Fore.WHITE + Style.BRIGHT} {self.hide_token(token)} {Style.RESET_ALL}"
+                    f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
+                    f"{Fore.CYAN + Style.BRIGHT} Proxy {Style.RESET_ALL}"
+                    f"{Fore.WHITE + Style.BRIGHT}{proxy}{Style.RESET_ALL}"
+                    f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
+                    f"{Fore.RED + Style.BRIGHT}GET User Data Failed{Style.RESET_ALL}"
+                    f"{Fore.CYAN + Style.BRIGHT} ]{Style.RESET_ALL}"
+                )
+                await asyncio.sleep(1)
+
+                if not use_proxy:
+                    return
+
+                print(
+                    f"{Fore.CYAN + Style.BRIGHT}[ {datetime.now().astimezone(wib).strftime('%x %X %Z')} ]{Style.RESET_ALL}"
+                    f"{Fore.WHITE + Style.BRIGHT} | {Style.RESET_ALL}"
+                    f"{Fore.BLUE + Style.BRIGHT}Try With The Next Proxy,{Style.RESET_ALL}"
+                    f"{Fore.YELLOW + Style.BRIGHT} Wait... {Style.RESET_ALL}",
+                    end="\r",
+                    flush=True
+                )
+
+                proxy = self.get_next_proxy()
+                continue
+            
+            name = user['name']
+
+            await self.users_confirm(token, proxy)
+
+            asyncio.create_task(self.process_loads_users_earning(token, name, proxy)) # Call Every 10 Minutes
+
+            asyncio.create_task(self.process_users_tasks_completion(token, name, proxy)) # Call Every 1 Day
+
+            node_ids = await self.process_loads_nodes_data(token, name, proxy)
+            if node_ids:
+                asyncio.create_task(
+                    self.process_loads_nodes_earning(token, name, node_ids, proxy)
+                )  # Call Every 10 Minutes
+
+                await asyncio.gather(
+                    *(
+                        self.connect_websocket(token, name, node['node_id'], use_proxy, self.get_next_proxy())
+                        for node in node_ids
+                    )
+                )
+
     async def main(self):
         try:
             with open('tokens.txt', 'r') as file:
@@ -717,7 +792,7 @@ class MyGate:
                         tasks.append(self.process_accounts(token, use_proxy))
 
                 await asyncio.gather(*tasks)
-                await asyncio.sleep(3)
+                await asyncio.sleep(10)
 
         except (Exception, FileNotFoundError) as e:
             self.log(f"{Fore.RED+Style.BRIGHT}Error: {e}{Style.RESET_ALL}")
