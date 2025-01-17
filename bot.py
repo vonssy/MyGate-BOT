@@ -375,7 +375,7 @@ class MyGate:
                 f"{Fore.CYAN + Style.BRIGHT} ]{Style.RESET_ALL}"
             )
             
-            await asyncio.sleep(600)
+            await asyncio.sleep(15 * 60)
                 
     async def process_loads_nodes_data(self, token: str, name: str, proxy=None):
         nodes = await self.users_all_nodes_data(token, proxy)
@@ -476,7 +476,7 @@ class MyGate:
                     )
                 await asyncio.sleep(3)
             
-            await asyncio.sleep(600)
+            await asyncio.sleep(15 * 60)
                 
     async def process_users_tasks_completion(self, token: str, name: str, proxy=None):
         while True:
@@ -570,96 +570,100 @@ class MyGate:
                     try:
                         async with session.ws_connect(wss_url, headers=headers) as wss:
                             self.log(
-                                f"{Fore.CYAN + Style.BRIGHT}[ Account{Style.RESET_ALL}"
+                                f"{Fore.CYAN + Style.BRIGHT}[ Account:{Style.RESET_ALL}"
                                 f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
                                 f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
-                                f"{Fore.CYAN + Style.BRIGHT} Proxy {Style.RESET_ALL}"
+                                f"{Fore.CYAN + Style.BRIGHT} Proxy: {Style.RESET_ALL}"
                                 f"{Fore.WHITE + Style.BRIGHT}{proxy}{Style.RESET_ALL}"
                                 f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
+                                f"{Fore.CYAN + Style.BRIGHT}Node ID:{Style.RESET_ALL}"
+                                f"{Fore.WHITE + Style.BRIGHT} {id} {Style.RESET_ALL}"
+                                f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
+                                f"{Fore.CYAN + Style.BRIGHT} Status: {Style.RESET_ALL}"
                                 f"{Fore.GREEN + Style.BRIGHT}Websocket Is Connected{Style.RESET_ALL}"
                                 f"{Fore.CYAN + Style.BRIGHT} ]{Style.RESET_ALL}"
                             )
-                            
-                            await wss.send_str(message)
-                            self.log(
-                                f"{Fore.CYAN + Style.BRIGHT}[ Account{Style.RESET_ALL}"
-                                f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
-                                f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
-                                f"{Fore.CYAN + Style.BRIGHT} Node ID {Style.RESET_ALL}"
-                                f"{Fore.WHITE + Style.BRIGHT}{id}{Style.RESET_ALL}"
-                                f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
-                                f"{Fore.GREEN + Style.BRIGHT}Sending Message:{Style.RESET_ALL}"
-                                f"{Fore.WHITE + Style.BRIGHT} {message} {Style.RESET_ALL}"
-                                f"{Fore.CYAN + Style.BRIGHT}]{Style.RESET_ALL}"
-                            )
 
-                            async for msg in wss:
-                                if msg.type == WSMsgType.TEXT:
-                                    if msg.data in ["2", "41"]:
-                                        await wss.send_str("3")
-                                        print(
-                                            f"{Fore.CYAN + Style.BRIGHT}[ {datetime.now().astimezone(wib).strftime('%x %X %Z')} ]{Style.RESET_ALL}"
-                                            f"{Fore.WHITE + Style.BRIGHT} | {Style.RESET_ALL}"
-                                            f"{Fore.BLUE + Style.BRIGHT}All Nodes Connection Estabilished{Style.RESET_ALL}",
-                                            end="\r",
-                                            flush=True
-                                        )
+                            try:
+                                await wss.send_str(message)
+                                self.log(
+                                    f"{Fore.CYAN + Style.BRIGHT}[ Account:{Style.RESET_ALL}"
+                                    f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
+                                    f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
+                                    f"{Fore.CYAN + Style.BRIGHT} Proxy: {Style.RESET_ALL}"
+                                    f"{Fore.WHITE + Style.BRIGHT}{proxy}{Style.RESET_ALL}"
+                                    f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
+                                    f"{Fore.CYAN + Style.BRIGHT}Node ID:{Style.RESET_ALL}"
+                                    f"{Fore.WHITE + Style.BRIGHT} {id} {Style.RESET_ALL}"
+                                    f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
+                                    f"{Fore.CYAN + Style.BRIGHT} Sending Message: {Style.RESET_ALL}"
+                                    f"{Fore.GREEN + Style.BRIGHT}{message}{Style.RESET_ALL}"
+                                    f"{Fore.CYAN + Style.BRIGHT} ]{Style.RESET_ALL}"
+                                )
+                                
+                                last_ping = int(time.time())
+                                async for msg in wss:
+                                    if time.time() - last_ping > 600:
+                                        break
+
+                                    if msg.type == WSMsgType.TEXT:
+                                        if msg.data in ["2", "41"]:
+                                            await wss.send_str("3")
+                                            print(
+                                                f"{Fore.CYAN + Style.BRIGHT}[ {datetime.now().astimezone(wib).strftime('%x %X %Z')} ]{Style.RESET_ALL}"
+                                                f"{Fore.WHITE + Style.BRIGHT} | {Style.RESET_ALL}"
+                                                f"{Fore.BLUE + Style.BRIGHT}All Nodes Connection Estabilished...{Style.RESET_ALL}",
+                                                end="\r",
+                                                flush=True
+                                            )
+                                        else:
+                                            self.log(
+                                                f"{Fore.CYAN + Style.BRIGHT}[ Account{Style.RESET_ALL}"
+                                                f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
+                                                f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
+                                                f"{Fore.CYAN + Style.BRIGHT} Node ID {Style.RESET_ALL}"
+                                                f"{Fore.WHITE + Style.BRIGHT}{id}{Style.RESET_ALL}"
+                                                f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
+                                                f"{Fore.GREEN + Style.BRIGHT}Received Message:{Style.RESET_ALL}"
+                                                f"{Fore.BLUE + Style.BRIGHT} {msg.data} {Style.RESET_ALL}"
+                                                f"{Fore.CYAN + Style.BRIGHT}]{Style.RESET_ALL}"
+                                            )
                                     else:
-                                        self.log(
-                                            f"{Fore.CYAN + Style.BRIGHT}[ Account{Style.RESET_ALL}"
-                                            f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
-                                            f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
-                                            f"{Fore.CYAN + Style.BRIGHT} Node ID {Style.RESET_ALL}"
-                                            f"{Fore.WHITE + Style.BRIGHT}{id}{Style.RESET_ALL}"
-                                            f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
-                                            f"{Fore.GREEN + Style.BRIGHT}Received Message:{Style.RESET_ALL}"
-                                            f"{Fore.WHITE + Style.BRIGHT} {msg.data} {Style.RESET_ALL}"
-                                            f"{Fore.CYAN + Style.BRIGHT}]{Style.RESET_ALL}"
-                                        )
-                                elif msg.type in [WSMsgType.CLOSED, WSMsgType.ERROR]:
-                                    self.log(
-                                        f"{Fore.CYAN + Style.BRIGHT}[ Account{Style.RESET_ALL}"
-                                        f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
-                                        f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
-                                        f"{Fore.CYAN + Style.BRIGHT} Node ID {Style.RESET_ALL}"
-                                        f"{Fore.WHITE + Style.BRIGHT}{id}{Style.RESET_ALL}"
-                                        f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
-                                        f"{Fore.YELLOW + Style.BRIGHT}Webscoket Connection Closed. Reconnecting...{Style.RESET_ALL}"
-                                        f"{Fore.CYAN + Style.BRIGHT} ]{Style.RESET_ALL}"
-                                    )
-                                    await wss.close()
-                                    break
+                                        break
+
+                            except Exception as e:
+                                self.log(
+                                    f"{Fore.CYAN + Style.BRIGHT}[ Account:{Style.RESET_ALL}"
+                                    f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
+                                    f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
+                                    f"{Fore.CYAN + Style.BRIGHT} Proxy: {Style.RESET_ALL}"
+                                    f"{Fore.WHITE + Style.BRIGHT}{proxy}{Style.RESET_ALL}"
+                                    f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
+                                    f"{Fore.CYAN + Style.BRIGHT}Node ID:{Style.RESET_ALL}"
+                                    f"{Fore.WHITE + Style.BRIGHT} {id} {Style.RESET_ALL}"
+                                    f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
+                                    f"{Fore.CYAN + Style.BRIGHT} Status: {Style.RESET_ALL}"
+                                    f"{Fore.YELLOW + Style.BRIGHT}Websocket Connection Closed{Style.RESET_ALL}"
+                                    f"{Fore.CYAN + Style.BRIGHT} ]{Style.RESET_ALL}"
+                                )
                             
                     except Exception as e:
-                        self.log(
-                            f"{Fore.CYAN + Style.BRIGHT}[ Account{Style.RESET_ALL}"
-                            f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
-                            f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
-                            f"{Fore.CYAN + Style.BRIGHT} Node ID {Style.RESET_ALL}"
-                            f"{Fore.WHITE + Style.BRIGHT}{id}{Style.RESET_ALL}"
-                            f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
-                            f"{Fore.YELLOW + Style.BRIGHT}Webscoket GET Error:{Style.RESET_ALL}"
-                            f"{Fore.RED + Style.BRIGHT} {e} {Style.RESET_ALL}"
-                            f"{Fore.CYAN + Style.BRIGHT}]{Style.RESET_ALL}"
-                        )
                         if attempt < retries - 1:
                             await asyncio.sleep(5)
                             continue
 
-                        text = "Retrying..."
-                        if use_proxy:
-                            text = "Retrying With Next Proxy..."
-
                         self.log(
-                            f"{Fore.CYAN + Style.BRIGHT}[ Account{Style.RESET_ALL}"
+                            f"{Fore.CYAN + Style.BRIGHT}[ Account:{Style.RESET_ALL}"
                             f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
                             f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
-                            f"{Fore.CYAN + Style.BRIGHT} Node ID {Style.RESET_ALL}"
-                            f"{Fore.WHITE + Style.BRIGHT}{id}{Style.RESET_ALL}"
+                            f"{Fore.CYAN + Style.BRIGHT} Proxy: {Style.RESET_ALL}"
+                            f"{Fore.WHITE + Style.BRIGHT}{proxy}{Style.RESET_ALL}"
                             f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
+                            f"{Fore.CYAN + Style.BRIGHT}Node ID:{Style.RESET_ALL}"
+                            f"{Fore.WHITE + Style.BRIGHT} {id} {Style.RESET_ALL}"
+                            f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
+                            f"{Fore.CYAN + Style.BRIGHT} Status: {Style.RESET_ALL}"
                             f"{Fore.RED + Style.BRIGHT}Websocket Not Connected{Style.RESET_ALL}"
-                            f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
-                            f"{Fore.BLUE + Style.BRIGHT}{text}{Style.RESET_ALL}"
                             f"{Fore.CYAN + Style.BRIGHT} ]{Style.RESET_ALL}"
                         )
                         if use_proxy:
@@ -667,13 +671,17 @@ class MyGate:
 
             except asyncio.CancelledError:
                 self.log(
-                    f"{Fore.CYAN + Style.BRIGHT}[ Account{Style.RESET_ALL}"
+                    f"{Fore.CYAN + Style.BRIGHT}[ Account:{Style.RESET_ALL}"
                     f"{Fore.WHITE + Style.BRIGHT} {name} {Style.RESET_ALL}"
                     f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
-                    f"{Fore.CYAN + Style.BRIGHT} Node ID {Style.RESET_ALL}"
-                    f"{Fore.WHITE + Style.BRIGHT}{id}{Style.RESET_ALL}"
+                    f"{Fore.CYAN + Style.BRIGHT} Proxy: {Style.RESET_ALL}"
+                    f"{Fore.WHITE + Style.BRIGHT}{proxy}{Style.RESET_ALL}"
                     f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
-                    f"{Fore.RED + Style.BRIGHT}Websocket Closed{Style.RESET_ALL}"
+                    f"{Fore.CYAN + Style.BRIGHT}Node ID:{Style.RESET_ALL}"
+                    f"{Fore.WHITE + Style.BRIGHT} {id} {Style.RESET_ALL}"
+                    f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
+                    f"{Fore.CYAN + Style.BRIGHT} Status: {Style.RESET_ALL}"
+                    f"{Fore.YELLOW + Style.BRIGHT}Websocket Closed{Style.RESET_ALL}"
                     f"{Fore.CYAN + Style.BRIGHT} ]{Style.RESET_ALL}"
                 )
                 break
@@ -729,8 +737,7 @@ class MyGate:
                 print(
                     f"{Fore.CYAN + Style.BRIGHT}[ {datetime.now().astimezone(wib).strftime('%x %X %Z')} ]{Style.RESET_ALL}"
                     f"{Fore.WHITE + Style.BRIGHT} | {Style.RESET_ALL}"
-                    f"{Fore.BLUE + Style.BRIGHT}Try With The Next Proxy,{Style.RESET_ALL}"
-                    f"{Fore.YELLOW + Style.BRIGHT} Wait... {Style.RESET_ALL}",
+                    f"{Fore.BLUE + Style.BRIGHT}Try With Next Proxy...{Style.RESET_ALL}",
                     end="\r",
                     flush=True
                 )
