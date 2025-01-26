@@ -6,14 +6,16 @@ Register Here : [MyGate Network](https://app.mygate.network/login?code=9OqMCE) |
 ## Features
 
   - Auto Get Account Information
-  - Auto Run With Auto Proxy if u Choose 1 [Use [Monosans Proxy](https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/all.txt)]
-  - Auto Run With Manual Proxy if u Choose 2 [Paste Ur personal proxy in manual_proxy.txt]
-  - Auto Run Without Proxy if u Choose 3
+  - Auto Run With [Monosans](https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/all.txt) Proxy - Choose 1
+  - Auto Run With Private Proxy - Choose 2
+  - Auto Run Without Proxy - Choose 3
   - Auto Register Node If Don't Have
   - Auto Complete Social Media and Ambassador Tasks Loop Every 1 Day
   - Auto Connect and Reconnect Websocket
   - Support Running Multi Node Each Accounts
   - Multi Accounts With Threads
+
+Note: Only Send Ping 1 Node ID If Not Use Proxy
 
 ## Requiremnets
 
@@ -41,7 +43,7 @@ Register Here : [MyGate Network](https://app.mygate.network/login?code=9OqMCE) |
     eyjxxxxx1
     eyjxxxxx2
   ```
-- **manual_proxy.txt:** You will find the `manual_proxy.txt` file in the project directory. Make sure `manual_proxy.txt` contains data that matches the format expected by the script. Here are examples of file formats:
+- **proxy.txt:** You will find the `proxy.txt` file in the project directory. Make sure `proxy.txt` contains data that matches the format expected by the script. Here are examples of file formats:
   ```bash
     ip:port # Default Protcol HTTP.
     protocol://ip:port
@@ -62,7 +64,7 @@ python bot.py #or python3 bot.py
 4. Login in MyGate's Extension With Your Accounts
 5. Done. Check Node List Page in MyGate Dashboard
 
-Note: if it doesn't increase, it's usually because of restrictions. try again later.
+Note: if it doesn't increase, it's usually because of restrictions. try again later. DWYOR.
 
 ## Buy Me a Coffee
 
