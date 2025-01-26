@@ -15,7 +15,7 @@ Register Here : [MyGate Network](https://app.mygate.network/login?code=9OqMCE) |
   - Support Running Multi Node Each Accounts
   - Multi Accounts With Threads
 
-Note: Only Send Ping 1 Node ID If Not Use Proxy
+Note: Only Send Ping 1 Node ID If Run Without Proxy.
 
 ## Requiremnets
 
