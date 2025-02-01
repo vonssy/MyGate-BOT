@@ -1,7 +1,8 @@
 # MyGate Network BOT
 MyGate Network BOT
 
-Register Here : [MyGate Network](https://app.mygate.network/login?code=9OqMCE) | Use Code : 9OqMCE
+- Register Here : [MyGate Network](https://app.mygate.network/login?code=9OqMCE)
+- Use Code : 9OqMCE
 
 ## Features
 
@@ -12,10 +13,9 @@ Register Here : [MyGate Network](https://app.mygate.network/login?code=9OqMCE) |
   - Auto Register Node If Don't Have
   - Auto Complete Social Media and Ambassador Tasks Loop Every 1 Day
   - Auto Connect and Reconnect Websocket
-  - Support Running Multi Node Each Accounts
+  - Support Running Multi Node Each Accounts If Use Proxy
+  - Only Running 1 Node If Run Without Proxy
   - Multi Accounts With Threads
-
-Note: Only Send Ping 1 Node ID If Run Without Proxy.
 
 ## Requiremnets
 
