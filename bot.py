@@ -578,8 +578,9 @@ class MyGate:
                                     f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
                                     f"{Fore.YELLOW + Style.BRIGHT}Reconnecting...{Style.RESET_ALL}"
                                 )
-                                wss_url = self.generate_wss_url(node_id)
                                 await asyncio.sleep(5)
+
+                                wss_url = self.generate_wss_url(node_id)
                                 break
 
                             response = await wss.receive_str()
@@ -629,8 +630,9 @@ class MyGate:
                                 f"{Fore.YELLOW + Style.BRIGHT} Websocket Connection Closed: {Style.RESET_ALL}"
                                 f"{Fore.RED + Style.BRIGHT}{str(e)}{Style.RESET_ALL}"
                             )
-                            wss_url = self.generate_wss_url(node_id)
                             await asyncio.sleep(5)
+
+                            wss_url = self.generate_wss_url(node_id)
                             break
 
             except Exception as e:
@@ -640,9 +642,10 @@ class MyGate:
                     f"{Fore.RED + Style.BRIGHT} Websocket Not Connected: {Style.RESET_ALL}"
                     f"{Fore.YELLOW + Style.BRIGHT}{str(e)}{Style.RESET_ALL}"
                 )
-                wss_url = self.generate_wss_url(node_id)
                 proxy = self.rotate_proxy_for_account(token) if use_proxy else None
                 await asyncio.sleep(5)
+
+                wss_url = self.generate_wss_url(node_id)
 
             except asyncio.CancelledError:
                 self.print_message(username, proxy, Fore.WHITE, 
