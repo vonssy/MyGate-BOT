@@ -554,9 +554,7 @@ class MyGate:
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
         }
         message = f'40{{"token":"Bearer {token}"}}'
-        registered = False
-        ping_time = None
-
+        
         while True:
             connector = ProxyConnector.from_url(proxy) if proxy else None
             session = ClientSession(connector=connector, timeout=ClientTimeout(total=120))
@@ -568,18 +566,21 @@ class MyGate:
                         f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
                         f"{Fore.GREEN + Style.BRIGHT}Websocket Is Connected{Style.RESET_ALL}"
                     )
+
+                    registered = False
+                    ping_time = None
                     
                     while True:
-                        
-                        if ping_time is not None and int(time.time()) - ping_time > 600:
-                            self.print_message(username, proxy, Fore.WHITE, 
-                                f"Node ID {node_id}"
-                                f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
-                                f"{Fore.YELLOW + Style.BRIGHT}Reconnecting...{Style.RESET_ALL}"
-                            )
-                            break
-
                         try:
+                            if ping_time is not None and int(time.time()) - ping_time > 600:
+                                self.print_message(username, proxy, Fore.WHITE, 
+                                    f"Node ID {node_id}"
+                                    f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
+                                    f"{Fore.YELLOW + Style.BRIGHT}Reconnecting...{Style.RESET_ALL}"
+                                )
+                                wss_url = self.generate_wss_url(node_id)
+                                break
+
                             response = await wss.receive_str()
                             if response and not registered:
                                 self.print_message(username, proxy, Fore.WHITE, 
@@ -627,8 +628,6 @@ class MyGate:
                                 f"{Fore.YELLOW + Style.BRIGHT} Websocket Connection Closed: {Style.RESET_ALL}"
                                 f"{Fore.RED + Style.BRIGHT}{str(e)}{Style.RESET_ALL}"
                             )
-                            registered = False
-                            ping_time = None
                             wss_url = self.generate_wss_url(node_id)
                             break
 
