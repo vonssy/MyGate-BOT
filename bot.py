@@ -579,6 +579,7 @@ class MyGate:
                                     f"{Fore.YELLOW + Style.BRIGHT}Reconnecting...{Style.RESET_ALL}"
                                 )
                                 wss_url = self.generate_wss_url(node_id)
+                                await asyncio.sleep(5)
                                 break
 
                             response = await wss.receive_str()
@@ -629,6 +630,7 @@ class MyGate:
                                 f"{Fore.RED + Style.BRIGHT}{str(e)}{Style.RESET_ALL}"
                             )
                             wss_url = self.generate_wss_url(node_id)
+                            await asyncio.sleep(5)
                             break
 
             except Exception as e:
