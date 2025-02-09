@@ -11,7 +11,8 @@ MyGate Network BOT
   - Auto Run With Private Proxy - Choose 2
   - Auto Run Without Proxy - Choose 3
   - Auto Register Node If Don't Have
-  - Auto Complete Social Media and Ambassador Tasks Loop Every 1 Day
+  - Auto Claim Daily Check-In
+  - Auto Complete Social Media and Ambassador Tasks
   - Auto Connect and Reconnect Websocket
   - Support Running Multi Node Each Accounts If Use Proxy
   - Only Running 1 Node If Run Without Proxy
