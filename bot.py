@@ -111,9 +111,9 @@ class MyGate:
             header, payload, signature = token.split(".")
             decoded_payload = base64.urlsafe_b64decode(payload + "==").decode("utf-8")
             parsed_payload = json.loads(decoded_payload)
-            username = parsed_payload.get("name")
+            email = parsed_payload.get("email")
 
-            return username
+            return email
         except Exception as e:
             return None
     
@@ -146,13 +146,15 @@ class MyGate:
         return activation_date
     
     def mask_account(self, account):
-        mask_account = account[:3] + '*' * 3 + account[-3:]
-        return mask_account
+        if "@" in account:
+            local, domain = account.split('@', 1)
+            mask_account = local[:3] + '*' * 3 + local[-3:]
+            return f"{mask_account}@{domain}"
     
     def print_message(self, account, proxy, color, message):
         self.log(
             f"{Fore.CYAN + Style.BRIGHT}[ Account:{Style.RESET_ALL}"
-            f"{Fore.WHITE + Style.BRIGHT} {account} {Style.RESET_ALL}"
+            f"{Fore.WHITE + Style.BRIGHT} {self.mask_account(account)} {Style.RESET_ALL}"
             f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
             f"{Fore.CYAN + Style.BRIGHT} Proxy: {Style.RESET_ALL}"
             f"{Fore.WHITE + Style.BRIGHT}{proxy}{Style.RESET_ALL}"
@@ -183,7 +185,7 @@ class MyGate:
             except ValueError:
                 print(f"{Fore.RED + Style.BRIGHT}Invalid input. Enter a number (1, 2 or 3).{Style.RESET_ALL}")
 
-    async def user_confirm(self, token: str, username: str, proxy=None, retries=5):
+    async def user_confirm(self, token: str, email: str, proxy=None, retries=5):
         url = "https://api.mygate.network/api/front/referrals/referral/9OqMCE"
         headers = {
             **self.headers,
@@ -207,9 +209,9 @@ class MyGate:
                     await asyncio.sleep(5)
                     continue
                 
-                return self.print_message(username, proxy, Fore.RED, f"GET User Data Failed: {Fore.YELLOW+Style.BRIGHT}{str(e)}")
+                return self.print_message(email, proxy, Fore.RED, f"GET User Data Failed: {Fore.YELLOW+Style.BRIGHT}{str(e)}")
         
-    async def user_today_earning(self, token: str, username: str, proxy=None, retries=5):
+    async def user_today_earning(self, token: str, email: str, proxy=None, retries=5):
         url = "https://api.mygate.network/api/front/user-transactions/TODAY/earn"
         headers = {
             **self.headers,
@@ -229,9 +231,9 @@ class MyGate:
                     await asyncio.sleep(5)
                     continue
                 
-                return self.print_message(username, proxy, Fore.RED, f"GET Today Earning Data Failed: {Fore.YELLOW+Style.BRIGHT}{str(e)}")
+                return self.print_message(email, proxy, Fore.RED, f"GET Today Earning Data Failed: {Fore.YELLOW+Style.BRIGHT}{str(e)}")
                 
-    async def user_season_earning(self, token: str, username: str, proxy=None, retries=5):
+    async def user_season_earning(self, token: str, email: str, proxy=None, retries=5):
         url = "https://api.mygate.network/api/front/user-transactions/ALL/earn"
         headers = {
             **self.headers,
@@ -251,9 +253,9 @@ class MyGate:
                     await asyncio.sleep(5)
                     continue
                 
-                return self.print_message(username, proxy, Fore.RED, f"GET Season Earning Data Failed: {Fore.YELLOW+Style.BRIGHT}{str(e)}")
+                return self.print_message(email, proxy, Fore.RED, f"GET Season Earning Data Failed: {Fore.YELLOW+Style.BRIGHT}{str(e)}")
                     
-    async def all_node_data(self, token: str, username: str, proxy=None, retries=5):
+    async def all_node_data(self, token: str, email: str, proxy=None, retries=5):
         url = "https://api.mygate.network/api/front/nodes"
         headers = {
             **self.headers,
@@ -274,9 +276,9 @@ class MyGate:
                     await asyncio.sleep(5)
                     continue
 
-                return self.print_message(username, proxy, Fore.RED, f"GET All Node Data Failed: {Fore.YELLOW+Style.BRIGHT}{str(e)}")
+                return self.print_message(email, proxy, Fore.RED, f"GET All Node Data Failed: {Fore.YELLOW+Style.BRIGHT}{str(e)}")
                 
-    async def single_node_data(self, token: str, username: str, _id: str, proxy=None, retries=5):
+    async def single_node_data(self, token: str, email: str, _id: str, proxy=None, retries=5):
         url = f"https://api.mygate.network/api/front/nodes/{_id}"
         headers = {
             **self.headers,
@@ -297,9 +299,9 @@ class MyGate:
                     await asyncio.sleep(5)
                     continue
 
-                return self.print_message(username, proxy, Fore.RED, f"GET Node ID {_id} Data Failed: {Fore.YELLOW+Style.BRIGHT}{str(e)}")
+                return self.print_message(email, proxy, Fore.RED, f"GET Node ID {_id} Data Failed: {Fore.YELLOW+Style.BRIGHT}{str(e)}")
                 
-    async def register_new_node(self, token: str, username: str, id: str, activation_date: str, proxy=None, retries=5):
+    async def register_new_node(self, token: str, email: str, id: str, activation_date: str, proxy=None, retries=5):
         url = "https://api.mygate.network/api/front/nodes"
         data = json.dumps({"id":id, "status":"Good", "activationDate":activation_date})
         headers = {
@@ -324,9 +326,9 @@ class MyGate:
                     await asyncio.sleep(5)
                     continue
 
-                return self.print_message(username, proxy, Fore.RED, f"Register New Node Failed: {Fore.YELLOW+Style.BRIGHT}{str(e)}")
+                return self.print_message(email, proxy, Fore.RED, f"Register New Node Failed: {Fore.YELLOW+Style.BRIGHT}{str(e)}")
                 
-    async def social_media_tasks(self, token: str, username: str, task_type: str, proxy=None, retries=5):
+    async def social_media_tasks(self, token: str, email: str, task_type: str, proxy=None, retries=5):
         url = f"https://api.mygate.network/api/front/achievements/{task_type}"
         headers = {
             **self.headers,
@@ -347,9 +349,9 @@ class MyGate:
                     await asyncio.sleep(5)
                     continue
 
-                return self.print_message(username, proxy, Fore.RED, f"Complete Social Media Tasks Failed: {Fore.YELLOW+Style.BRIGHT}{str(e)}")
+                return self.print_message(email, proxy, Fore.RED, f"Complete Social Media Tasks Failed: {Fore.YELLOW+Style.BRIGHT}{str(e)}")
 
-    async def task_lists(self, token: str, username: str, type: str, proxy=None, retries=5):
+    async def task_lists(self, token: str, email: str, type: str, proxy=None, retries=5):
         url = f"https://api.mygate.network/api/front/achievements/{type}"
         headers = {
             **self.headers,
@@ -370,9 +372,9 @@ class MyGate:
                     await asyncio.sleep(5)
                     continue
 
-                return self.print_message(username, proxy, Fore.RED, f"GET Available Tasks Failed: {Fore.YELLOW+Style.BRIGHT}{str(e)}")
+                return self.print_message(email, proxy, Fore.RED, f"GET Available Tasks Failed: {Fore.YELLOW+Style.BRIGHT}{str(e)}")
 
-    async def submit_tasks(self, token: str, username: str, type: str, task_id: str, proxy=None, retries=5):
+    async def submit_tasks(self, token: str, email: str, type: str, task_id: str, proxy=None, retries=5):
         url = f"https://api.mygate.network/api/front/achievements/{type}/{task_id}/submit"
         headers = {
             **self.headers,
@@ -393,35 +395,36 @@ class MyGate:
                     await asyncio.sleep(5)
                     continue
 
-                return self.print_message(username, proxy, Fore.RED, f"Complete Available Tasks Failed: {Fore.YELLOW+Style.BRIGHT}{str(e)}")
+                return self.print_message(email, proxy, Fore.RED, f"Complete Available Tasks Failed: {Fore.YELLOW+Style.BRIGHT}{str(e)}")
             
-    async def process_user_earning(self, token: str, username: str, use_proxy: bool):
+    async def process_user_earning(self, token: str, email: str, use_proxy: bool):
         while True:
-            proxy = self.get_next_proxy_for_account(username) if use_proxy else None
+            proxy = self.get_next_proxy_for_account(email) if use_proxy else None
 
-            today_earning = await self.user_today_earning(token, username, proxy)
-            season_earning = await self.user_season_earning(token, username, proxy)
+            today_earning = await self.user_today_earning(token, email, proxy)
+            season_earning = await self.user_season_earning(token, email, proxy)
             if today_earning and season_earning:
                 today_point = today_earning['data']
                 season_point = season_earning['data']
 
-                self.print_message(username, proxy, Fore.WHITE, 
+                self.print_message(email, proxy, Fore.WHITE, 
                     f"Earning Today {today_point} PTS"
                     f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
                     f"{Fore.WHITE + Style.BRIGHT}Earning Season {season_point} PTS{Style.RESET_ALL}"
                 )
             
-            await asyncio.sleep(15 * 60)
+            await asyncio.sleep(1 * 60 * 60)
             
-    async def process_complete_mission(self, token: str, username: str, use_proxy: bool):
+    async def process_complete_mission(self, token: str, email: str, use_proxy: bool):
         while True:
-            proxy = self.get_next_proxy_for_account(username) if use_proxy else None
+            proxy = self.get_next_proxy_for_account(email) if use_proxy else None
+            await self.user_confirm(token, email, proxy)
 
             for task_type in ["follow-x", "follow-telegram"]:
-                await self.social_media_tasks(token, username, task_type, proxy)
+                await self.social_media_tasks(token, email, task_type, proxy)
 
             for type in ["daily-check-in", "ambassador"]:
-                tasks = await self.task_lists(token, username, type, proxy)
+                tasks = await self.task_lists(token, email, type, proxy)
                 if tasks:
                     completed = False
                     for task in tasks:
@@ -441,9 +444,9 @@ class MyGate:
 
 
                         if task and status == 'UNCOMPLETED':
-                            submit = await self.submit_tasks(token, username, type, task_id, proxy)
+                            submit = await self.submit_tasks(token, email, type, task_id, proxy)
                             if submit and submit.get('message') == "OK":
-                                self.print_message(username, proxy, Fore.WHITE, 
+                                self.print_message(email, proxy, Fore.WHITE, 
                                     f"Task {title}"
                                     f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
                                     f"{Fore.WHITE + Style.BRIGHT}{description}{Style.RESET_ALL}"
@@ -453,7 +456,7 @@ class MyGate:
                                     f"{Fore.WHITE + Style.BRIGHT}{reward} {reward_type}{Style.RESET_ALL}"
                                 )
                             else:
-                                self.print_message(username, proxy, Fore.WHITE, 
+                                self.print_message(email, proxy, Fore.WHITE, 
                                     f"Task {title} "
                                     f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
                                     f"{Fore.WHITE + Style.BRIGHT} {description} {Style.RESET_ALL}"
@@ -466,18 +469,18 @@ class MyGate:
 
                     if completed:
                         if type == "daily-check-in":
-                            self.print_message(username, proxy, Fore.GREEN, "Already Check-In Today")
+                            self.print_message(email, proxy, Fore.GREEN, "Already Check-In Today")
                         elif type == "ambassador":
-                            self.print_message(username, proxy, Fore.GREEN, "All Available Tasks Is Completed")
+                            self.print_message(email, proxy, Fore.GREEN, "All Available Tasks Is Completed")
                 
             await asyncio.sleep(12 * 60 * 60)
 
-    async def process_register_node(self, token: str, username: str, proxy=None):
+    async def process_register_node(self, token: str, email: str, proxy=None):
         node_id = self.generate_node_id()
         activation_date = self.generate_activation_date()
-        new_node = await self.register_new_node(token, username, node_id, activation_date, proxy)
+        new_node = await self.register_new_node(token, email, node_id, activation_date, proxy)
         if new_node:
-            self.print_message(username, proxy, Fore.GREEN, 
+            self.print_message(email, proxy, Fore.GREEN, 
                 "Register New Node Success "
                 f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
                 f"{Fore.CYAN + Style.BRIGHT} Node ID: {Style.RESET_ALL}"
@@ -486,21 +489,21 @@ class MyGate:
 
             return node_id
 
-    async def process_loads_node_data(self, token: str, username: str, use_proxy: bool):
-        proxy = self.get_next_proxy_for_account(username) if use_proxy else None
+    async def process_loads_node_data(self, token: str, email: str, use_proxy: bool):
+        proxy = self.get_next_proxy_for_account(email) if use_proxy else None
 
         nodes = None
         while nodes is None:
-            nodes = await self.all_node_data(token, username, proxy)
+            nodes = await self.all_node_data(token, email, proxy)
             if not nodes:
-                proxy = self.rotate_proxy_for_account(username) if use_proxy else None
+                proxy = self.rotate_proxy_for_account(email) if use_proxy else None
                 continue
 
             list_nodes = nodes.get("items", [])
             node_ids = []
 
             if isinstance(list_nodes, list) and len(list_nodes) == 0:
-                new_node_id = await self.process_register_node(token, username, proxy)
+                new_node_id = await self.process_register_node(token, email, proxy)
                 if new_node_id:
                     return [{"node_id":new_node_id}]
 
@@ -517,17 +520,17 @@ class MyGate:
             
             return node_ids
     
-    async def get_node_earning(self, token: str, username: str, node_id: str, _id: str, use_proxy: bool):
+    async def get_node_earning(self, token: str, email: str, node_id: str, _id: str, use_proxy: bool):
         while True:
-            proxy = self.get_next_proxy_for_account(username) if use_proxy else None
+            proxy = self.get_next_proxy_for_account(email) if use_proxy else None
 
-            node = await self.single_node_data(token, username, _id, proxy)
+            node = await self.single_node_data(token, email, _id, proxy)
             if node:
                 today_earn = node['todayEarn']
                 season_earn = node['seasonEarn']
                 uptime = node['uptime']
 
-                self.print_message(username, proxy, Fore.WHITE, 
+                self.print_message(email, proxy, Fore.WHITE, 
                     f"Node ID {node_id}"
                     f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
                     f"{Fore.CYAN + Style.BRIGHT}Earning:{Style.RESET_ALL}"
@@ -539,9 +542,9 @@ class MyGate:
                     f"{Fore.WHITE + Style.BRIGHT}{uptime}{Style.RESET_ALL}"
                 )
 
-            await asyncio.sleep(30 * 60)
+            await asyncio.sleep(1 * 60 * 60)
     
-    async def connect_websocket(self, token: str, username: str, node_id: str, use_proxy: bool):
+    async def connect_websocket(self, token: str, email: str, node_id: str, use_proxy: bool):
         wss_url = self.generate_wss_url(node_id)
         headers = {
             "Accept-encoding": "gzip, deflate, br, zstd",
@@ -566,7 +569,7 @@ class MyGate:
             try:
                 async with session.ws_connect(wss_url, headers=headers) as wss:
 
-                    self.print_message(username, proxy, Fore.WHITE, 
+                    self.print_message(email, proxy, Fore.WHITE, 
                         f"Node ID {node_id}"
                         f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
                         f"{Fore.GREEN + Style.BRIGHT}Websocket Is Connected{Style.RESET_ALL}"
@@ -577,20 +580,19 @@ class MyGate:
                     
                     while True:
                         try:
-                            if ping_time is not None and int(time.time()) - ping_time > 600:
-                                self.print_message(username, proxy, Fore.WHITE, 
+                            if ping_time is not None and int(time.time()) - ping_time > (10 * 60):
+                                self.print_message(email, proxy, Fore.WHITE, 
                                     f"Node ID {node_id}"
                                     f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
                                     f"{Fore.YELLOW + Style.BRIGHT}Reconnecting...{Style.RESET_ALL}"
                                 )
-                                await asyncio.sleep(5)
 
                                 wss_url = self.generate_wss_url(node_id)
                                 break
 
                             response = await wss.receive_str()
                             if response and not registered:
-                                self.print_message(username, proxy, Fore.WHITE, 
+                                self.print_message(email, proxy, Fore.WHITE, 
                                     f"Node ID {node_id} "
                                     f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
                                     f"{Fore.CYAN + Style.BRIGHT} Received Message: {Style.RESET_ALL}"
@@ -598,7 +600,7 @@ class MyGate:
                                 )
 
                                 await wss.send_str(message)
-                                self.print_message(username, proxy, Fore.WHITE, 
+                                self.print_message(email, proxy, Fore.WHITE, 
                                     f"Node ID {node_id} "
                                     f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
                                     f"{Fore.CYAN + Style.BRIGHT} Sent Message: {Style.RESET_ALL}"
@@ -621,7 +623,7 @@ class MyGate:
                                         ping_time = int(time.time())
 
                                 else:
-                                    self.print_message(username, proxy, Fore.WHITE, 
+                                    self.print_message(email, proxy, Fore.WHITE, 
                                         f"Node ID {node_id} "
                                         f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
                                         f"{Fore.CYAN + Style.BRIGHT} Received Message: {Style.RESET_ALL}"
@@ -629,7 +631,7 @@ class MyGate:
                                     )
                                 
                         except Exception as e:
-                            self.print_message(username, proxy, Fore.WHITE, 
+                            self.print_message(email, proxy, Fore.WHITE, 
                                 f"Node ID {node_id} "
                                 f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
                                 f"{Fore.YELLOW + Style.BRIGHT} Websocket Connection Closed: {Style.RESET_ALL}"
@@ -641,7 +643,7 @@ class MyGate:
                             break
 
             except Exception as e:
-                self.print_message(username, proxy, Fore.WHITE, 
+                self.print_message(email, proxy, Fore.WHITE, 
                     f"Node ID {node_id} "
                     f"{Fore.MAGENTA + Style.BRIGHT}-{Style.RESET_ALL}"
                     f"{Fore.RED + Style.BRIGHT} Websocket Not Connected: {Style.RESET_ALL}"
@@ -653,7 +655,7 @@ class MyGate:
                 wss_url = self.generate_wss_url(node_id)
 
             except asyncio.CancelledError:
-                self.print_message(username, proxy, Fore.WHITE, 
+                self.print_message(email, proxy, Fore.WHITE, 
                     f"Node ID {node_id}"
                     f"{Fore.MAGENTA + Style.BRIGHT} - {Style.RESET_ALL}"
                     f"{Fore.YELLOW + Style.BRIGHT}Websocket Closed{Style.RESET_ALL}"
@@ -662,8 +664,8 @@ class MyGate:
             finally:
                 await session.close()
 
-    async def process_send_ping(self, token: str, username: str, use_proxy: bool):
-        nodes = await self.process_loads_node_data(token, username, use_proxy)
+    async def process_send_ping(self, token: str, email: str, use_proxy: bool):
+        nodes = await self.process_loads_node_data(token, email, use_proxy)
         if nodes:
             tasks = []
             for node in nodes:
@@ -671,23 +673,17 @@ class MyGate:
 
                 if "id" in node:
                     _id = node['id']
-                    tasks.append(self.get_node_earning(token, username, node_id, _id, use_proxy))
+                    tasks.append(asyncio.create_task(self.get_node_earning(token, email, node_id, _id, use_proxy)))
 
-                tasks.append(self.connect_websocket(token, username, node_id, use_proxy))
+                tasks.append(asyncio.create_task(self.connect_websocket(token, email, node_id, use_proxy)))
 
             await asyncio.gather(*tasks)
-            
-    async def process_user_confirm(self, token: str, username: str, use_proxy: bool):
-        proxy = self.get_next_proxy_for_account(username) if use_proxy else None
-        await self.user_confirm(token, username, proxy)
         
-    async def process_accounts(self, token: str, username: str, use_proxy: bool):
-        await self.process_user_confirm(token, username, use_proxy)
-
+    async def process_accounts(self, token: str, email: str, use_proxy: bool):
         tasks = []
-        tasks.append(self.process_user_earning(token, username, use_proxy))
-        tasks.append(self.process_complete_mission(token, username, use_proxy))
-        tasks.append(self.process_send_ping(token, username, use_proxy))
+        tasks.append(asyncio.create_task(self.process_user_earning(token, email, use_proxy)))
+        tasks.append(asyncio.create_task(self.process_complete_mission(token, email, use_proxy)))
+        tasks.append(asyncio.create_task(self.process_send_ping(token, email, use_proxy)))
         await asyncio.gather(*tasks)
 
     async def main(self):
@@ -717,9 +713,9 @@ class MyGate:
                 tasks = []
                 for token in tokens:
                     if token:
-                        username = self.decode_token(token)
-                        if username:
-                            tasks.append(self.process_accounts(token, username, use_proxy))
+                        email = self.decode_token(token)
+                        if email:
+                            tasks.append(asyncio.create_task(self.process_accounts(token, email, use_proxy)))
 
                 await asyncio.gather(*tasks)
                 await asyncio.sleep(10)
